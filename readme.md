@@ -32,7 +32,7 @@ To convert text into vectors, call vector_main or vector_list_main:
 ```python
 items = {
     "key": "your-secret-key",
-    "text": "Input text content"
+    "text": "Input text content"```
 }
 vector = vector_main(items)
 Data Insertion
@@ -44,7 +44,7 @@ items = {
     "insert_data": [{"id": 1, "text": "Text content to insert"}],
     "collection_name": "your-collection-name"
 }
-milvus_insert_main(items)
+milvus_insert_main(items)```
 Data Retrieval
 To retrieve vector data from the Milvus Lite database and optionally rerank the results, call milvus_search_main:
 
@@ -58,7 +58,7 @@ items = {
     "rerank": 1
 }
 results = milvus_search_main(items)
-print(results)
+print(results)```
 License
 This project is licensed under the MIT License.
 
