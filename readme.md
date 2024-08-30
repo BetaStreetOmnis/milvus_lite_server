@@ -1,3 +1,8 @@
+<p align="center">
+  <a href="./README.md">English</a> |
+  <a href="./README_zh.md">简体中文</a> |
+</p>
+
 ## Introduction
 This project leverages Milvus Lite for vector search and reranking. It implements functionalities to convert text into vectors, insert vector data, retrieve data from Milvus Lite, and rerank the results using a custom reranker. The project is implemented in Python and provides operations via a RESTful API.
 
