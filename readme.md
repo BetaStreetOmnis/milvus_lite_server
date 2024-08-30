@@ -13,18 +13,15 @@ Milvus Lite
 configparser
 Installation
 Clone the repository:
-bash
-复制代码
+
 git clone https://github.com/your-username/your-repo-name.git
 Install dependencies:
-bash
-复制代码
+
 pip install -r requirements.txt
 Configure config.ini file:
 Create a config.ini file in the project root directory to configure the API key:
 
-ini
-复制代码
+
 [api]
 key = your-secret-key
 Usage
@@ -32,8 +29,7 @@ Vector Conversion
 
 Call vector_main or vector_list_main to convert text into vectors.
 
-python
-复制代码
+
 items = {
     "key": "your-secret-key",
     "text": "Input text content"
@@ -43,8 +39,7 @@ Data Insertion
 
 Call milvus_insert_main to insert vector data into Milvus Lite database.
 
-python
-复制代码
+
 items = {
     "key": "your-secret-key",
     "insert_data": [{"id": 1, "text": "Text content to insert"}],
@@ -55,8 +50,7 @@ Data Retrieval
 
 Call milvus_search_main to retrieve vector data from Milvus Lite database based on criteria, with support for reranking the results.
 
-python
-复制代码
+
 items = {
     "key": "your-secret-key",
     "query": "Search query",
