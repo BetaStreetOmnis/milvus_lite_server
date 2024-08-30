@@ -1,10 +1,10 @@
-## Introduction
-This is a project that uses Milvus Lite for vector search and reranking. The project implements functionalities to convert text into vectors, insert vector data, retrieve data from Milvus Lite, and rerank the results using a reranker. The project is implemented in Python and supports operations via RESTful API.
+Introduction
+This project leverages Milvus Lite for vector search and reranking. It implements functionalities to convert text into vectors, insert vector data, retrieve data from Milvus Lite, and rerank the results using a custom reranker. The project is implemented in Python and provides operations via a RESTful API.
 
-## Features
+Features
 Vector Conversion: Convert input text into vector representations.
-Data Insertion: Insert vectorized text data into Milvus Lite database.
-Data Retrieval: Retrieve vector data from Milvus Lite database based on criteria, with support for reranking the results.
+Data Insertion: Insert vectorized text data into the Milvus Lite database.
+Data Retrieval: Retrieve vector data from the Milvus Lite database based on search criteria, with support for reranking the results.
 Requirements
 Python 3.7+
 torch
@@ -14,32 +14,31 @@ configparser
 Installation
 Clone the repository:
 
+
 git clone https://github.com/your-username/your-repo-name.git
 Install dependencies:
+```python
+pip install -r requirements.txt```
 
-pip install -r requirements.txt
-Configure config.ini file:
-Create a config.ini file in the project root directory to configure the API key:
+Configure config.ini file: Create a config.ini file in the project's root directory to set up your API key:
 
 
 [api]
 key = your-secret-key
 Usage
 Vector Conversion
+To convert text into vectors, call vector_main or vector_list_main:
 
-Call vector_main or vector_list_main to convert text into vectors.
-
-
+```python
 items = {
     "key": "your-secret-key",
     "text": "Input text content"
 }
 vector = vector_main(items)
 Data Insertion
+To insert vector data into the Milvus Lite database, use milvus_insert_main:
 
-Call milvus_insert_main to insert vector data into Milvus Lite database.
-
-
+```python
 items = {
     "key": "your-secret-key",
     "insert_data": [{"id": 1, "text": "Text content to insert"}],
@@ -47,8 +46,7 @@ items = {
 }
 milvus_insert_main(items)
 Data Retrieval
-
-Call milvus_search_main to retrieve vector data from Milvus Lite database based on criteria, with support for reranking the results.
+To retrieve vector data from the Milvus Lite database and optionally rerank the results, call milvus_search_main:
 
 
 items = {
@@ -63,3 +61,4 @@ results = milvus_search_main(items)
 print(results)
 License
 This project is licensed under the MIT License.
+
