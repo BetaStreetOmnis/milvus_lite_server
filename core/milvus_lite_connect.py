@@ -14,7 +14,29 @@ class MilvusClientManager:
             dimension=self.dimension
         )
 
+     # 根据内容生成唯一长int id
+    def generate_unique_id(self, content):
+        # 使用内容的哈希值作为基础
+        hash_value = hash(content)
+        
+        # 确保ID为正数
+        unique_id = abs(hash_value)
+        
+        # 将ID转换为64位整数
+        unique_id = unique_id & ((1 << 64) - 1)
+        
+        return unique_id
+
     def insert_data(self, data):
+        # 为每条数据添加或替换 id
+        for item in data:
+            if 'id' not in item or not item['id']:
+                # 如果没有 id 或 id 为空，则生成新的 id
+                item['id'] = self.generate_unique_id(item.get('text', ''))
+            else:
+                # 如果已有 id，确保它是长整型
+                item['id'] = int(item['id']) & ((1 << 64) - 1)
+
         res = self.client.insert(
             collection_name=self.collection_name,
             data=data
