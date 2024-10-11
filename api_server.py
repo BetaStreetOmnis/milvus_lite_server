@@ -1,66 +1,159 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Dict, Any
-# from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
-# from sse_starlette.sse import ServerSentEvent, EventSourceResponse
-from base_server import common_logic
 from fastapi import FastAPI, Body, HTTPException, Header
 from pydantic import BaseModel
-from fastapi import FastAPI
-
-# from core.rerank_model import reranker
-# from core.embbeding_model import get_embedding
+import uvicorn
+from typing import List, Dict, Any
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import sys
-# 添加项目路径
+import configparser
+import traceback
+
+# 添加当前文件路径到系统路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from execute_main import vector_list_main, vector_main, milvus_insert_main, milvus_select_main, milvus_search_main,reranker,get_embedding
-from base_server import common_logic
+# 导入自定义模块
+from core.embbeding_model import get_embedding
+from core.milvus_lite_connect import MilvusClientManager
+from core.rerank_model import reranker
+
+# 读取配置文件
+config = configparser.ConfigParser()
+config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.ini'))
+secret_key = config.get('api', 'key')
 
 
-app = FastAPI(title='ai检索能力组件',description='ai基础能力接口')
+dbsite_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db')
 
-templates_path = os.path.join(os.path.dirname(__file__), "templates")
+# 创建FastAPI应用
+app = FastAPI(title='语义检索', description='基于gte的语义检索组件')
 
+# 设置模板路径
+templates_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 templates = Jinja2Templates(templates_path)
 
-# 配置CORS中间件
+# 添加CORS中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许所有来源，也可以指定特定的来源
-    allow_credentials=True,  # 允许携带身份验证信息（例如，Cookies）
-    allow_methods=["*"],  # 允许所有HTTP方法（GET、POST、PUT、DELETE等）
-    allow_headers=["*"],  # 允许所有HTTP头部
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# 单个text 向量化
-@app.post("/vector/",summary='数据向量化',description='',tags=['算法'])
-async def simhash(item:dict): return common_logic(item, vector_main)
+# 验证API密钥
+def validate_key(authorization: str):
+    # auth_scheme, _, api_key = authorization.partition(' ')
+    # return auth_scheme.lower() == "bearer" and api_key == secret_key
+    if authorization == secret_key:
+        return True
+    else:
+        return False
 
+# 定义请求模型
+class VectorRequest(BaseModel):
+    text: str
 
-# 数据向量化存储
-@app.post("/vectors/",summary='数据向量化列表',description='',tags=['算法'])
-async def simhash(item:dict): return common_logic(item, vector_list_main)
+class VectorListRequest(BaseModel):
+    vector_list: List[str]
 
-# 向量数据入库（主键不可重复）
-@app.post("/milvus_insert/",summary='数据向量化存储',description='',tags=['算法'])
-async def simhash(item:dict): return common_logic(item, milvus_insert_main)
+class MilvusInsertRequest(BaseModel):
+    collection_name: str
+    insert_data: List[Dict[str, Any]]
 
-# 向量数据查询
-@app.post("/milvus_select/",summary='数据向量化查询',description='',tags=['算法'])
-async def simhash(item:dict): return common_logic(item, milvus_search_main)
+class MilvusSearchRequest(BaseModel):
+    collection_name: str
+    query: str
+    output_field: List[str]
+    filter_criteria: str = ""
+    limit: int = 10
+    rerank: int = 0
 
-# # 向量数据删除
-# @app.post("/milvus_delete/",summary='数据向量化查询',description='',tags=['算法'])
-# async def simhash(item:dict): return common_logic(item, milvus_delete_main)
+class MilvusDeleteRequest(BaseModel):
+    collection_name: str
+    delete_data: List[Dict[str, Any]]
 
-# 向量数据重排序rerank
+# 数据向量化接口
+@app.post("/vector/", summary='数据向量化', description='', tags=['算法'])
+async def simhash(request: VectorRequest, authorization: str = Header(None)): 
+    try:
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
+        vector = get_embedding(request.text)
+        return {"status_code": 200, "data": vector}
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=430, detail=str(traceback.format_exc()))
+
+# 数据向量化列表接口
+@app.post("/vectors/", summary='数据向量化列表', description='', tags=['算法'])
+async def simhash(request: VectorListRequest, authorization: str = Header(None)): 
+    try:
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
+        vectors = [get_embedding(x) for x in request.vector_list]
+        return {"status_code": 200, "data": vectors}
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=430, detail=str(traceback.format_exc()))
+
+# 数据向量化存储接口
+@app.post("/milvus_insert/", summary='数据向量化存储', description='', tags=['算法'])
+async def simhash(request: MilvusInsertRequest, authorization: str = Header(None)): 
+    try:
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
+        manager = MilvusClientManager(db_path=os.path.join(dbsite_path, request.collection_name + '.db'), collection_name=request.collection_name)
+        for line in request.insert_data:
+            line['vector'] = get_embedding(line['text'])
+        manager.insert_data(request.insert_data)
+        return {"status_code": 200, "data": "数据插入成功"}
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=430, detail=str(traceback.format_exc()))
+
+# 数据向量化查询接口
+@app.post("/milvus_select/", summary='数据向量化查询', description='', tags=['算法'])
+async def simhash(request: MilvusSearchRequest, authorization: str = Header(None)): 
+    try:
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
+        manager = MilvusClientManager(db_path=os.path.join(dbsite_path, request.collection_name + '.db'), collection_name=request.collection_name)
+        res = manager.search_vectors(request.query, output_field=request.output_field, filter_criteria=request.filter_criteria, limit=request.limit)
+        res = res[0]
+        if request.rerank:
+            document = [x['entity']['text'] for x in res]
+            rerank_res = reranker(request.query, document)
+            for idx, similar_percent in enumerate(rerank_res):
+                res[idx]["rerank_score_percent"] = similar_percent[-1]
+        return {"status_code": 200, "data": res}
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=430, detail=str(traceback.format_exc()))
+
+# 数据向量化删除接口
+@app.post("/milvus_delete/", summary='数据向量化删除', description='', tags=['算法'])
+async def simhash(request: MilvusDeleteRequest, authorization: str = Header(None)): 
+    try:
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
+        filter_criteria = " and ".join(
+            "{} == '{}'".format(key, value) if isinstance(value, str) else "{} == {}".format(key, value)
+            for key, value in request.delete_data[0].items()
+        )
+        manager = MilvusClientManager(db_path=os.path.join(dbsite_path, request.collection_name + '.db'), collection_name=request.collection_name)
+        res = manager.delete_data(filter_criteria=filter_criteria)
+        return {"status_code": 200, "data": res}
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=430, detail=str(traceback.format_exc()))
+
+# 重排序请求模型
 class RerankRequest(BaseModel):
     model: str
     query: str
@@ -74,16 +167,18 @@ class RerankResponse(BaseModel):
     object: str = "list"
     data: List[RerankDocument]
 
+# 重排序接口
 @app.post("/rerank", response_model=RerankResponse)
-async def rerank(request: RerankRequest):
+async def rerank(request: RerankRequest, authorization: str = Header(None)):
     try:
-        # 调用你的 rerank 逻辑，并返回排序结果
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
         ranked_documents = reranker(request.query, request.documents)
         return RerankResponse(data=ranked_documents)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# openai type  embedding api
+# 嵌入请求模型
 class EmbeddingRequest(BaseModel):
     input: List[str]
 
@@ -92,61 +187,58 @@ class EmbeddingResponse(BaseModel):
     model: str
     usage: Dict[str, int]
 
+# 创建嵌入接口
 @app.post("/embeddings", response_model=EmbeddingResponse)
-async def create_embeddings(request: EmbeddingRequest):
-    # 获取输入文本
-    input_texts = request.input
-    # 构造与OpenAI类似的API返回格式
-    result = EmbeddingResponse(
-        data=[{"embedding": get_embedding(emb), "index": idx} for idx, emb in enumerate(input_texts)],
-        model="GTE-to-OpenAI-adapted",
-        usage={"total_tokens": len(input_texts)}  # 模拟token消耗
-    )
-    return result
+async def create_embeddings(request: EmbeddingRequest, authorization: str = Header(None)):
+    try:
+        if not validate_key(authorization):
+            return {"code": 422, "msg": "验证失败"}
+        input_texts = request.input
+        result = EmbeddingResponse(
+            data=[{"embedding": get_embedding(emb), "index": idx} for idx, emb in enumerate(input_texts)],
+            model="GTE-to-OpenAI-adapted",
+            usage={"total_tokens": len(input_texts)}
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-# dify对接  知识库检索工具对接api
-
+# 输入数据模型
 class InputData(BaseModel):
     point: str
     params: dict = {}
 
+# Dify Milvus 搜索接口
 @app.post("/dify_milvus_search")
 async def dify_receive(data: InputData = Body(...), authorization: str = Header(None)):
-    """
-    Receive API query data from Dify.
-    """
-    expected_api_key = "367686"  # TODO Your API key of this API
+    expected_api_key = "367686"
     auth_scheme, _, api_key = authorization.partition(' ')
     if auth_scheme.lower() != "bearer" or api_key != expected_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
     point = data.point
     if point == "ping":
-        return {
-            "result": "pong"
-        }
+        return {"result": "pong"}
     if point == "app.external_data_tool.query":
-        res =  milvus_search_main(params=data.params["inputs"])
+        items = data.params["inputs"]
+        filter_criteria = items.get("filter_criteria", "")
+        query = items.get("query")
+        collection_name = items["collection_name"]
+        manager = MilvusClientManager(db_path=os.path.join(dbsite_path, collection_name + '.db'), collection_name=collection_name)
+        output_field = items.get("output_field", "")
+        limit = items.get("limit", 10)
+        rerank = items.get("rerank", 0)
+        res = manager.search_vectors(query, output_field=output_field, filter_criteria=filter_criteria, limit=limit)
+        print(res)
+        res = res[0]
+        if rerank:
+            document = [x['entity']['text'] for x in res]
+            rerank_res = reranker(query, document)
+            print(rerank_res)
+            for idx, similar_percent in enumerate(rerank_res):
+                res[idx]["rerank_score_percent"] = similar_percent[-1]
         return res
     raise HTTPException(status_code=400, detail="Not implemented")
 
-
-# def handle_app_external_data_tool_query(params: dict):
-#     try:
-#         keyword = params['inputs']['query']
-#     except Exception as e:
-#         keyword = params['query']
-#     payload = {}
-#     headers = {}
-#     x = bing_search(keyword)
-
-#     x = x.replace('"','').replace("'","")
-#     write_sql(f"insert into google_search (content) values ('{x}')")
-#     return {"result":x}
-
-
-
-
-
+# 启动应用
 if __name__ == '__main__':
-    uvicorn.run("api_server:app", host="0.0.0.0", port=8088, reload=False)
+    uvicorn.run("api_server:app", host="0.0.0.0", port=8089, reload=False)

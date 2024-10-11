@@ -2,6 +2,7 @@ from modelscope.pipelines import pipeline
 from modelscope.utils.constant import Tasks
 import numpy as np
 
+
 # embedding model
 model_id = "iic/nlp_gte_sentence-embedding_chinese-base"
 pipeline_se = pipeline(Tasks.sentence_embedding,

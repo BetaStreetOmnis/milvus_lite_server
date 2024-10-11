@@ -2,27 +2,58 @@
 这是一个使用 Milvus Lite 进行向量检索和排序的项目。项目实现了将文本转换为向量、向量数据的插入、检索、以及使用 reranker 进行重排序的功能。项目采用 Python 实现，并支持通过 RESTful API 进行操作。
 
 ## 功能
-向量转换：将输入文本转换为向量表示。
-数据写入：将文本数据向量化后插入 Milvus Lite 数据库。
-数据查询：从 Milvus Lite 数据库中检索符合条件的向量数据，并支持使用 reranker 进行结果重排序。
+- 向量转换：将输入文本转换为向量表示。
+- 数据写入：将文本数据向量化后插入 Milvus Lite 数据库。
+- 数据查询：从 Milvus Lite 数据库中检索符合条件的向量数据，并支持使用 reranker 进行结果重排序。
+- 数据删除：从 Milvus Lite 数据库中删除符合条件的向量数据。
+- 重排序：对检索结果进行重新排序。
+- 嵌入：生成文本的嵌入向量。
 
 ## 环境要求
-Python 3.7+
-torch
-modelscope
-Milvus Lite
-configparser
+- Python 3.7+
+- torch
+- modelscope
+- Milvus Lite
+- configparser
+- FastAPI
+- uvicorn
 
 ## 安装
 克隆项目到本地：
 ```bash
 git clone https://github.com/BetaStreetOmnis/milvus_lite_server
 ```
+
 安装依赖：
 
 ```bash
 pip install -r requirements.txt
 ```
+
+## Docker 镜像部署
+
+本项目支持使用 Docker 进行快速部署。以下是具体步骤：
+
+1. 克隆项目仓库：
+   ```bash
+   git clone https://github.com/BetaStreetOmnis/milvus_lite_server
+   cd milvus_lite_server
+   ```
+
+2. 构建 Docker 镜像：
+   ```bash
+   docker build -t milvus_lite_server:latest .
+   ```
+
+3. 运行 Docker 容器：
+   ```bash
+   docker run -d -p 8089:8089 --name milvus_lite_api \
+   -v /path/to/your/db:/app/db milvus_lite_server
+   ```
+
+   注意：请将 `/path/to/your/db` 替换为您希望存储数据库文件的实际路径。
+
+这样，您就可以通过 Docker 快速部署和运行 Milvus Lite 服务器了。
 
 配置 config.ini 文件：
 在项目根目录下创建 config.ini 文件，配置 API 密钥：
@@ -33,7 +64,7 @@ ini
 key = your-secret-key
 ```
 
-## 使用方法
+## 接口调用方法
 
 ### 向量转换
 调用 vector_main 或 vector_list_main 将文本转换为向量。
