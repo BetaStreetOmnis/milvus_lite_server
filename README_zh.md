@@ -89,11 +89,12 @@ def batch_text_to_vectors(text_list):
     return response.text
 ```
 ## 效果
-![查询效果示例](181c92500f023a219f7a374d66ddddc.png)
 直接接口查询的效果，其中的rerank_score_percent是指查询的语句和搜索的结果的相似度，是基于二次重排序rerank计算的，可以保证计算的相似度更加的准确，当然计算速度也会慢些，关于rerank可以查看文章为什么需要rerank。
+![查询效果示例](181c92500f023a219f7a374d66ddddc.png)
+
 
 也可以用于直接前端查询，用于语义检索的功能中，效果如下：
-![查询效果示例](4cdd0b4c81a2a015896e8c65702.png)
+![查询效果示例](8dd94cdd0b4c81a2a015896e8c65702.png)
 
 ## Rerank与OpenAI接口集成
 在需要高精度查询时，Rerank功能可以进行查询结果的重排序，显著提升相关性。虽然开启Rerank会增加系统计算开销，但对于某些精度要求较高的场景非常有用。
